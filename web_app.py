@@ -80,7 +80,7 @@ def show_login_page():
     st.markdown("🍃 Please Enter Your Information", unsafe_allow_html=True)
     st.markdown("---")
 
-    menu = st.radio("", ["Login", "Sign Up"], horizontal=True)
+    menu = st.radio("Select Option", ["Login", "Sign Up"], horizontal=True)
 
     if menu == "Login":
         username = st.text_input("👤 Login ID")
