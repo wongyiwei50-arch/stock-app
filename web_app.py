@@ -93,7 +93,7 @@ def show_login_page():
                 st.session_state.username = username
                 st.session_state.portfolio = load_portfolio(username)
                 st.success("Login successful!")
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.error("Invalid username or password.")
 
