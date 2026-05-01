@@ -469,4 +469,17 @@ def show_main_app():
     # Real-time price refresh
     st.experimental_rerun()
 
-# =========================
+# ==========================
+# RUN APP
+# ==========================
+if not st.session_state.logged_in:
+    show_login_page()
+else:
+    if "cash" not in st.session_state:
+        portfolio = load_portfolio(st.session_state.current_user)
+        st.session_state.cash = portfolio["cash"]
+        st.session_state.stocks = portfolio["stocks"]
+        st.session_state.price_alerts = portfolio["price_alerts"]
+        st.session_state.trade_history = portfolio["trade_history"]
+
+    show_main_app()
