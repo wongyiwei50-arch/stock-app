@@ -392,7 +392,7 @@ def show_main_app():
     st.sidebar.markdown("---")
 
     if price is None:
-        st.sidebar.markdown("<div class='status-box'>Unable to fetch live price now.</div
+        st.sidebar.markdown("<div class='status-box'>Unable to fetch live price now.</div>", unsafe_allow_html=True)
     else:
         holding = st.session_state.stocks.get(ticker)
         if holding:
