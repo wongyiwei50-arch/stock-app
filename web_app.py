@@ -1,3 +1,4 @@
+import time
 import streamlit as st
 import yfinance as yf
 import pandas as pd
@@ -5,187 +6,9 @@ import json
 import os
 from datetime import datetime
 
-# =========================
-# PAGE SETUP
-# =========================
-st.set_page_config(
-    page_title="Fusion Stock Trading",
-    page_icon="📉",
-    layout="wide"
-)
-
-# =========================
-# CUSTOM CSS
-# IMPORTANT: CSS must be inside st.markdown, not written directly in Python.
-# =========================
-st.markdown("""
-<style>
-    .stApp {
-        background-color: #111111;
-        color: white;
-    }
-
-    [data-testid="stSidebar"] {
-        background-color: #000000;
-    }
-
-    .main-title {
-        text-align: center;
-        font-size: 34px;
-        font-weight: 800;
-        color: white;
-        margin-bottom: 0px;
-    }
-
-    .subtitle {
-        text-align: center;
-        color: #bfbfbf;
-        font-size: 15px;
-        margin-top: 0px;
-        margin-bottom: 20px;
-    }
-
-    .metric-box {
-        background-color: #1d1f27;
-        border: 1px solid #24384d;
-        border-radius: 10px;
-        padding: 18px;
-        text-align: center;
-        margin-bottom: 12px;
-    }
-
-    .metric-label {
-        color: #bfbfbf;
-        font-size: 14px;
-    }
-
-    .metric-value {
-        color: white;
-        font-size: 28px;
-        font-weight: 800;
-    }
-
-    .sell-price {
-        color: #ff3b30;
-        font-size: 36px;
-        font-weight: 900;
-        text-align: center;
-    }
-
-    .buy-price {
-        color: #1e90ff;
-        font-size: 36px;
-        font-weight: 900;
-        text-align: center;
-    }
-
-    .section-card {
-        background-color: #06111d;
-        border: 1px solid #24384d;
-        border-radius: 10px;
-        padding: 18px;
-        margin-bottom: 18px;
-    }
-
-    .status-box {
-        background-color: #000000;
-        color: #cfcfcf;
-        border: 1px solid #333333;
-        border-radius: 8px;
-        padding: 12px;
-        text-align: center;
-        margin-top: 12px;
-        margin-bottom: 12px;
-    }
-
-    .small-note {
-        color: #bcbcbc;
-        font-size: 13px;
-        text-align: center;
-    }
-
-    div.stButton > button {
-        width: 100%;
-        border-radius: 8px;
-        font-weight: 700;
-        border: none;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# =========================
-# FILES
-# =========================
-USERS_FILE = "users.json"
-
-
-def portfolio_file(username):
-    return f"portfolio_{username}.json"
-
-
-# =========================
-# USER FUNCTIONS
-# =========================
-def load_users():
-    if not os.path.exists(USERS_FILE):
-        return {}
-    try:
-        with open(USERS_FILE, "r", encoding="utf-8") as file:
-            return json.load(file)
-    except Exception:
-        return {}
-
-
-def save_users(users):
-    with open(USERS_FILE, "w", encoding="utf-8") as file:
-        json.dump(users, file, indent=4)
-
-
-# =========================
-# PORTFOLIO FUNCTIONS
-# =========================
-def default_portfolio():
-    return {
-        "cash": 10000.0,
-        "stocks": {},
-        "price_alerts": {},
-        "trade_history": []
-    }
-
-
-def load_portfolio(username):
-    file_name = portfolio_file(username)
-    if not os.path.exists(file_name):
-        return default_portfolio()
-
-    try:
-        with open(file_name, "r", encoding="utf-8") as file:
-            data = json.load(file)
-            return {
-                "cash": data.get("cash", 10000.0),
-                "stocks": data.get("stocks", {}),
-                "price_alerts": data.get("price_alerts", {}),
-                "trade_history": data.get("trade_history", [])
-            }
-    except Exception:
-        return default_portfolio()
-
-
-def save_portfolio(username):
-    data = {
-        "cash": st.session_state.cash,
-        "stocks": st.session_state.stocks,
-        "price_alerts": st.session_state.price_alerts,
-        "trade_history": st.session_state.trade_history
-    }
-
-    with open(portfolio_file(username), "w", encoding="utf-8") as file:
-        json.dump(data, file, indent=4)
-
-
-# =========================
-# STOCK DATA
-# =========================
+# ==========================
+# STOCK DATA FUNCTIONS
+# ==========================
 TICKER_NAME_MAP = {
     "AAPL": "Apple Inc.",
     "MSFT": "Microsoft Corporation",
@@ -198,7 +21,6 @@ TICKER_NAME_MAP = {
     "JPM": "JPMorgan Chase & Co.",
     "V": "Visa Inc."
 }
-
 
 def get_stock_price(ticker):
     try:
@@ -219,50 +41,145 @@ def get_stock_price(ticker):
 
     return None
 
+# ==========================
+# Stock Price Refresh
+# ==========================
+def refresh_price(ticker):
+    price = get_stock_price(ticker)  # 获取最新股票价格
 
-def get_chart_data(ticker):
+    if price is None:
+        st.session_state.last_price = None
+        st.session_state.bid_price = None
+        st.session_state.ask_price = None
+        return None
+
+    st.session_state.last_price = price
+    st.session_state.bid_price = round(price - 0.03, 2)
+    st.session_state.ask_price = round(price + 0.03, 2)
+    return price
+
+# ==========================
+# Auto-Refresh Every Second
+# ==========================
+def auto_refresh(ticker):
+    while True:
+        price = refresh_price(ticker)  # 获取最新股票价格
+
+        if price is None:
+            st.write("Failed to fetch live price.")
+        else:
+            st.write(f"Updated price: ${price:.2f}")
+
+        # 强制刷新 Streamlit 页面
+        time.sleep(1)  # 等待 1 秒后刷新价格
+        st.experimental_rerun()  # 刷新页面，实时更新价格
+
+# ==========================
+# USER LOGIN AND PORTFOLIO FUNCTIONS
+# ==========================
+USERS_FILE = "users.json"
+
+def load_users():
+    if not os.path.exists(USERS_FILE):
+        return {}
     try:
-        data = yf.download(ticker, period="30d", interval="1d", progress=False)
-        if data.empty:
-            return pd.DataFrame()
-
-        if isinstance(data.columns, pd.MultiIndex):
-            data.columns = data.columns.get_level_values(0)
-
-        data = data.reset_index()
-        return data
+        with open(USERS_FILE, "r", encoding="utf-8") as file:
+            return json.load(file)
     except Exception:
-        return pd.DataFrame()
+        return {}
 
+def save_users(users):
+    with open(USERS_FILE, "w", encoding="utf-8") as file:
+        json.dump(users, file, indent=4)
 
-# =========================
-# SESSION INIT
-# =========================
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
+# ==========================
+# PORTFOLIO FUNCTIONS
+# ==========================
+def portfolio_file(username):
+    return f"portfolio_{username}.json"
 
-if "current_user" not in st.session_state:
-    st.session_state.current_user = None
+def load_portfolio(username):
+    file_name = portfolio_file(username)
+    if not os.path.exists(file_name):
+        return {
+            "cash": 10000.0,
+            "stocks": {},
+            "price_alerts": {},
+            "trade_history": []
+        }
 
-if "selected_ticker" not in st.session_state:
-    st.session_state.selected_ticker = "AAPL"
+    try:
+        with open(file_name, "r", encoding="utf-8") as file:
+            data = json.load(file)
+            return {
+                "cash": data.get("cash", 10000.0),
+                "stocks": data.get("stocks", {}),
+                "price_alerts": data.get("price_alerts", {}),
+                "trade_history": data.get("trade_history", [])
+            }
+    except Exception:
+        return {
+            "cash": 10000.0,
+            "stocks": {},
+            "price_alerts": {},
+            "trade_history": []
+        }
 
-if "quantity" not in st.session_state:
-    st.session_state.quantity = 15
+def save_portfolio(username):
+    data = {
+        "cash": st.session_state.cash,
+        "stocks": st.session_state.stocks,
+        "price_alerts": st.session_state.price_alerts,
+        "trade_history": st.session_state.trade_history
+    }
 
-if "last_price" not in st.session_state:
-    st.session_state.last_price = None
+    with open(portfolio_file(username), "w", encoding="utf-8") as file:
+        json.dump(data, file, indent=4)
 
-if "bid_price" not in st.session_state:
-    st.session_state.bid_price = None
+# ==========================
+# MAIN APP PAGE
+# ==========================
+def show_main_app():
+    ticker = st.sidebar.selectbox(
+        "Select Stock:",
+        list(TICKER_NAME_MAP.keys()),
+        index=list(TICKER_NAME_MAP.keys()).index(st.session_state.selected_ticker)
+    )
+    st.session_state.selected_ticker = ticker
 
-if "ask_price" not in st.session_state:
-    st.session_state.ask_price = None
+    # 启动实时刷新
+    auto_refresh(ticker)
 
+    st.write(f"Current Ticker: {ticker}")
 
-# =========================
+    # Current Holdings Section
+    st.markdown("### Current Holdings")
+    current_holding = st.session_state.stocks.get(ticker, {})
+    st.write(f"Shares: {current_holding.get('quantity', 0)}")
+    st.write(f"Buy Price: ${current_holding.get('buy_price', 0.0)}")
+    st.write(f"Stop Loss: ${current_holding.get('stop_loss', 'not set')}")
+    st.write(f"Take Profit: ${current_holding.get('take_profit', 'not set')}")
+
+    # Price Alert Section
+    st.sidebar.markdown("### Set Price Alert")
+    alert_price = st.sidebar.number_input("Alert Price", min_value=0.0, step=0.01)
+    alert_type = st.sidebar.selectbox("Alert Type", ["Above", "Below"])
+
+    if st.sidebar.button("Set Alert"):
+        if alert_price <= 0:
+            st.sidebar.error("Please enter a valid alert price.")
+        else:
+            st.session_state.price_alerts[ticker] = {
+                "price": alert_price,
+                "type": alert_type,
+                "triggered": False
+            }
+            save_portfolio(st.session_state.current_user)
+            st.sidebar.success(f"Price alert set for {ticker}: {alert_type} ${alert_price:.2f}")
+
+# ==========================
 # LOGIN PAGE
-# =========================
+# ==========================
 def show_login_page():
     st.markdown("<div class='main-title'>📉 Fusion Stock Trading</div>", unsafe_allow_html=True)
     st.markdown("<div class='subtitle'>Trade Smarter. Grow Faster.</div>", unsafe_allow_html=True)
@@ -316,9 +233,9 @@ def show_login_page():
                     st.success("Account created successfully! You can now login.")
 
 
-# =========================
+# ==========================
 # TRADING FUNCTIONS
-# =========================
+# ==========================
 def add_trade_history(ticker, trade_type, quantity, price, amount, fee=0.0, note=""):
     record = {
         "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -483,9 +400,9 @@ def check_manual_alert(ticker):
         st.warning(f"🔔 Alert triggered: {ticker} is below ${alert_price:.2f}")
 
 
-# =========================
+# ==========================
 # MAIN APP PAGE
-# =========================
+# ==========================
 def show_main_app():
     ticker = st.sidebar.selectbox(
         "Select Stock:",
@@ -573,149 +490,4 @@ def show_main_app():
     c1, c2 = st.sidebar.columns(2)
     with c1:
         st.markdown(f"<div class='sell-price'>{st.session_state.bid_price if st.session_state.bid_price else '--.--'}</div>", unsafe_allow_html=True)
-        st.markdown("<div style='text-align:center;color:#ff8a80'>Bid</div>", unsafe_allow_html=True)
-    with c2:
-        st.markdown(f"<div class='buy-price'>{st.session_state.ask_price if st.session_state.ask_price else '--.--'}</div>", unsafe_allow_html=True)
-        st.markdown("<div style='text-align:center;color:#90caf9'>Ask</div>", unsafe_allow_html=True)
-
-    s1, s2 = st.sidebar.columns(2)
-    with s1:
-        if st.button("Sell by Market"):
-            sell_by_market(ticker, quantity)
-            st.rerun()
-    with s2:
-        if st.button("Buy by Market"):
-            buy_by_market(ticker, quantity)
-            st.rerun()
-
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("Manual Alert")
-    alert_price = st.sidebar.number_input("Alert Price", min_value=0.0, step=0.01)
-    alert_type = st.sidebar.selectbox("Alert Type", ["Above", "Below"])
-
-    if st.sidebar.button("Set Alert"):
-        if alert_price <= 0:
-            st.sidebar.error("Please enter a valid alert price.")
-        else:
-            st.session_state.price_alerts[ticker] = {
-                "price": alert_price,
-                "type": alert_type,
-                "triggered": False
-            }
-            save_portfolio(st.session_state.current_user)
-            st.sidebar.success(f"Price alert set for {ticker}: {alert_type} ${alert_price:.2f}")
-
-    st.sidebar.markdown("<p class='small-note'>SL/TP will be monitored automatically while holding.<br>You can also set a manual price alert.</p>", unsafe_allow_html=True)
-
-    # Main area
-    top1, top2, top3 = st.columns([1, 1, 0.4])
-
-    with top1:
-        st.markdown(f"<div class='metric-box'><div class='metric-label'>Balance</div><div class='metric-value'>${st.session_state.cash:.2f}</div></div>", unsafe_allow_html=True)
-    with top2:
-        price_text = f"${price:.2f}" if price is not None else "$0.00"
-        st.markdown(f"<div class='metric-box'><div class='metric-label'>Stock Price</div><div class='metric-value'>{price_text}</div></div>", unsafe_allow_html=True)
-    with top3:
-        if st.button("Logout"):
-            save_portfolio(st.session_state.current_user)
-            st.session_state.logged_in = False
-            st.session_state.current_user = None
-            st.rerun()
-
-    st.markdown("### Current Holdings")
-    holdings_rows = []
-
-    for stock_ticker, data in st.session_state.stocks.items():
-        if data.get("quantity", 0) <= 0:
-            continue
-
-        current_price = get_stock_price(stock_ticker) or data.get("buy_price", 0)
-        shares = data.get("quantity", 0)
-        avg_cost = data.get("buy_price", 0)
-        market_value = current_price * shares
-        pnl_amount = (current_price - avg_cost) * shares
-        entry_time = data.get("buy_time", "Unknown")
-
-        holdings_rows.append({
-            "Ticker": stock_ticker,
-            "Stock Name": TICKER_NAME_MAP.get(stock_ticker, stock_ticker),
-            "Shares": shares,
-            "Average Cost": f"${avg_cost:.2f}",
-            "Current Price": f"${current_price:.2f}",
-            "Market Value": f"${market_value:.2f}",
-            "PnL Amount": f"${pnl_amount:.2f}",
-            "SL": f"${data.get('stop_loss'):.2f}" if data.get("stop_loss") is not None else "not set",
-            "TP": f"${data.get('take_profit'):.2f}" if data.get("take_profit") is not None else "not set",
-            "Entry Time": entry_time
-        })
-
-    if holdings_rows:
-        st.dataframe(pd.DataFrame(holdings_rows), use_container_width=True, hide_index=True)
-    else:
-        st.info("No holdings yet.")
-
-    st.markdown("### Trade History")
-
-    history_col1, history_col2 = st.columns([1, 0.25])
-    with history_col2:
-        if st.session_state.trade_history:
-            history_df_for_download = pd.DataFrame(st.session_state.trade_history)
-            csv_data = history_df_for_download.to_csv(index=False).encode("utf-8")
-            st.download_button(
-                "Export History (CSV)",
-                data=csv_data,
-                file_name="trade_history.csv",
-                mime="text/csv"
-            )
-
-    if st.session_state.trade_history:
-        st.dataframe(pd.DataFrame(st.session_state.trade_history), use_container_width=True, hide_index=True)
-    else:
-        st.info("No trade history yet.")
-
-    st.markdown("### Chart")
-
-    chart_data = get_chart_data(ticker)
-    if chart_data.empty:
-        st.warning("No chart data available.")
-    else:
-        if "Date" in chart_data.columns and "Close" in chart_data.columns:
-            st.line_chart(chart_data.set_index("Date")["Close"], use_container_width=True)
-        else:
-            st.line_chart(chart_data["Close"], use_container_width=True)
-
-    st.markdown("### Graphical Comparison of Multiple Stocks")
-    compare_text = st.text_input("Enter tickers separated by comma", "AAPL,MSFT,GOOGL")
-
-    if st.button("📊 Compare Stocks"):
-        tickers = [item.strip().upper() for item in compare_text.split(",") if item.strip()]
-        comparison_df = pd.DataFrame()
-
-        for compare_ticker in tickers:
-            data = get_chart_data(compare_ticker)
-            if not data.empty and "Close" in data.columns:
-                if "Date" in data.columns:
-                    comparison_df[compare_ticker] = data.set_index("Date")["Close"]
-                else:
-                    comparison_df[compare_ticker] = data["Close"]
-
-        if comparison_df.empty:
-            st.warning("Unable to fetch comparison data.")
-        else:
-            st.line_chart(comparison_df, use_container_width=True)
-
-
-# =========================
-# RUN APP
-# =========================
-if not st.session_state.logged_in:
-    show_login_page()
-else:
-    if "cash" not in st.session_state:
-        portfolio = load_portfolio(st.session_state.current_user)
-        st.session_state.cash = portfolio["cash"]
-        st.session_state.stocks = portfolio["stocks"]
-        st.session_state.price_alerts = portfolio["price_alerts"]
-        st.session_state.trade_history = portfolio["trade_history"]
-
-    show_main_app()
+        st.markdown("<div style='text-align:center;color:#ff8a80'>
