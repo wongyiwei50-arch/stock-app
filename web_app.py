@@ -6,6 +6,43 @@ import os
 from datetime import datetime
 
 # ==========================
+# Custom CSS Styles
+# ==========================
+st.markdown("""
+    <style>
+    .main-title {
+        font-size: 28px;
+        font-weight: bold;
+        color: #2c3e50;
+        margin-bottom: 10px;
+    }
+    .subtitle {
+        font-size: 16px;
+        color: #7f8c8d;
+        margin-bottom: 20px;
+    }
+    .status-box {
+        background-color: #f8f9fa;
+        padding: 10px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+    }
+    .sell-price {
+        font-size: 24px;
+        color: #e74c3c;
+        font-weight: bold;
+        text-align: center;
+    }
+    .buy-price {
+        font-size: 24px;
+        color: #27ae60;
+        font-weight: bold;
+        text-align: center;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# ==========================
 # STOCK DATA FUNCTIONS
 # ==========================
 TICKER_NAME_MAP = {
@@ -30,35 +67,28 @@ def get_stock_price(ticker):
             return round(float(price), 2)
     except Exception:
         pass
-
     try:
         data = yf.download(ticker, period="1d", interval="1m", progress=False)
         if not data.empty:
             return round(float(data["Close"].iloc[-1]), 2)
     except Exception:
         pass
-
     return None
 
-# ==========================
-# Stock Price Refresh
-# ==========================
 def refresh_price(ticker):
-    price = get_stock_price(ticker)  # Get the latest stock price
-
+    price = get_stock_price(ticker)
     if price is None:
         st.session_state.last_price = None
         st.session_state.bid_price = None
         st.session_state.ask_price = None
         return None
-
     st.session_state.last_price = price
     st.session_state.bid_price = round(price - 0.03, 2)
     st.session_state.ask_price = round(price + 0.03, 2)
     return price
 
 # ==========================
-# USER LOGIN AND PORTFOLIO FUNCTIONS
+# USER LOGIN AND PORTFOLIO
 # ==========================
 USERS_FILE = "users.json"
 
@@ -75,9 +105,6 @@ def save_users(users):
     with open(USERS_FILE, "w", encoding="utf-8") as file:
         json.dump(users, file, indent=4)
 
-# ==========================
-# PORTFOLIO FUNCTIONS
-# ==========================
 def portfolio_file(username):
     return f"portfolio_{username}.json"
 
@@ -90,7 +117,6 @@ def load_portfolio(username):
             "price_alerts": {},
             "trade_history": []
         }
-
     try:
         with open(file_name, "r", encoding="utf-8") as file:
             data = json.load(file)
@@ -115,7 +141,6 @@ def save_portfolio(username):
         "price_alerts": st.session_state.price_alerts,
         "trade_history": st.session_state.trade_history
     }
-
     with open(portfolio_file(username), "w", encoding="utf-8") as file:
         json.dump(data, file, indent=4)
 
@@ -123,26 +148,19 @@ def save_portfolio(username):
 # SESSION INIT
 # ==========================
 if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False  # Initialize 'logged_in'
-
+    st.session_state.logged_in = False
 if "current_user" not in st.session_state:
     st.session_state.current_user = None
-
 if "selected_ticker" not in st.session_state:
     st.session_state.selected_ticker = "AAPL"
-
 if "quantity" not in st.session_state:
     st.session_state.quantity = 15
-
 if "last_price" not in st.session_state:
     st.session_state.last_price = None
-
 if "bid_price" not in st.session_state:
     st.session_state.bid_price = None
-
 if "ask_price" not in st.session_state:
     st.session_state.ask_price = None
-
 
 # ==========================
 # LOGIN PAGE
@@ -152,31 +170,25 @@ def show_login_page():
     st.markdown("<div class='subtitle'>Trade Smarter. Grow Faster.</div>", unsafe_allow_html=True)
 
     col1, col2, col3 = st.columns([1, 1.2, 1])
-
     with col2:
         st.markdown("### 🍃 Please Enter Your Information")
-
         tab_login, tab_signup = st.tabs(["Login", "Sign Up"])
 
         with tab_login:
             username = st.text_input("Login ID", key="login_username")
             password = st.text_input("Password", type="password", key="login_password")
-
             if st.button("🔍 Login", key="login_button"):
                 users = load_users()
-
                 if username not in users or users[username] != password:
                     st.error("Invalid username or password.")
                 else:
                     st.session_state.logged_in = True
                     st.session_state.current_user = username
-
                     portfolio = load_portfolio(username)
                     st.session_state.cash = portfolio["cash"]
                     st.session_state.stocks = portfolio["stocks"]
                     st.session_state.price_alerts = portfolio["price_alerts"]
                     st.session_state.trade_history = portfolio["trade_history"]
-
                     st.success("Login successful!")
                     st.experimental_rerun()
 
@@ -184,10 +196,8 @@ def show_login_page():
             new_username = st.text_input("Create Login ID", key="signup_username")
             new_password = st.text_input("Create Password", type="password", key="signup_password")
             confirm_password = st.text_input("Confirm Password", type="password", key="signup_confirm")
-
             if st.button("📝 Sign Up", key="signup_button"):
                 users = load_users()
-
                 if not new_username or not new_password:
                     st.error("Please fill all fields.")
                 elif new_password != confirm_password:
@@ -198,7 +208,6 @@ def show_login_page():
                     users[new_username] = new_password
                     save_users(users)
                     st.success("Account created successfully! You can now login.")
-
 
 # ==========================
 # TRADING FUNCTIONS
@@ -214,41 +223,19 @@ def add_trade_history(ticker, trade_type, quantity, price, amount, fee=0.0, note
         "fee": round(float(fee), 2),
         "note": note
     }
-
     st.session_state.trade_history.insert(0, record)
     st.session_state.trade_history = st.session_state.trade_history[:500]
 
-
-def refresh_price(ticker):
-    price = get_stock_price(ticker)
-
-    if price is None:
-        st.session_state.last_price = None
-        st.session_state.bid_price = None
-        st.session_state.ask_price = None
-        return None
-
-    st.session_state.last_price = price
-    st.session_state.bid_price = round(price - 0.03, 2)
-    st.session_state.ask_price = round(price + 0.03, 2)
-    return price
-
-
 def buy_by_market(ticker, quantity):
     ask_price = st.session_state.ask_price
-
     if ask_price is None:
         st.error("No live price available yet.")
         return
-
     total_cost = ask_price * quantity
-
     if st.session_state.cash < total_cost:
         st.error("Insufficient funds.")
         return
-
     st.session_state.cash -= total_cost
-
     if ticker not in st.session_state.stocks:
         st.session_state.stocks[ticker] = {
             "quantity": 0,
@@ -257,115 +244,85 @@ def buy_by_market(ticker, quantity):
             "stop_loss": None,
             "take_profit": None
         }
-
     old_qty = st.session_state.stocks[ticker]["quantity"]
     old_avg = st.session_state.stocks[ticker]["buy_price"]
     new_qty = old_qty + quantity
     new_avg = ((old_qty * old_avg) + (quantity * ask_price)) / new_qty
-
     st.session_state.stocks[ticker]["quantity"] = new_qty
     st.session_state.stocks[ticker]["buy_price"] = round(new_avg, 2)
     st.session_state.stocks[ticker]["buy_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
     if st.session_state.stocks[ticker].get("stop_loss") is None:
         st.session_state.stocks[ticker]["stop_loss"] = round(max(0, ask_price - 1), 2)
-
     if st.session_state.stocks[ticker].get("take_profit") is None:
         st.session_state.stocks[ticker]["take_profit"] = round(ask_price + 1, 2)
-
     add_trade_history(ticker, "Buy (Open)", quantity, ask_price, -total_cost, 0.0, "Open position")
     save_portfolio(st.session_state.current_user)
     st.success(f"Bought {quantity} shares of {ticker} at ${ask_price:.2f} each.")
 
-
 def sell_by_market(ticker, quantity, note="Manual close"):
     bid_price = st.session_state.bid_price
-
     if bid_price is None:
         st.error("No live price available yet.")
         return
-
     if ticker not in st.session_state.stocks:
         st.error("You do not have this stock in your portfolio.")
         return
-
     holding_qty = st.session_state.stocks[ticker].get("quantity", 0)
-
     if holding_qty < quantity:
         st.error(f"Not enough shares to sell. You currently hold {holding_qty} shares.")
         return
-
     buy_price = st.session_state.stocks[ticker]["buy_price"]
     proceeds = bid_price * quantity
     pnl = (bid_price - buy_price) * quantity
-
     st.session_state.cash += proceeds
     st.session_state.stocks[ticker]["quantity"] -= quantity
-
     add_trade_history(ticker, "Sell (Close)", quantity, bid_price, proceeds, 0.0, note)
-
     if st.session_state.stocks[ticker]["quantity"] <= 0:
         del st.session_state.stocks[ticker]
-
     save_portfolio(st.session_state.current_user)
     st.success(f"Sold {quantity} shares of {ticker} at ${bid_price:.2f}. P/L: ${pnl:.2f}")
-
 
 def check_stop_loss_take_profit(ticker):
     if ticker not in st.session_state.stocks:
         return
-
     current_price = st.session_state.last_price
     if current_price is None:
         return
-
     data = st.session_state.stocks[ticker]
     quantity = data.get("quantity", 0)
     stop_loss = data.get("stop_loss")
     take_profit = data.get("take_profit")
-
     if quantity <= 0:
         return
-
     if stop_loss is not None and current_price <= stop_loss:
         st.warning(f"Stop Loss triggered at ${current_price:.2f}")
         sell_by_market(ticker, quantity, "Stop Loss triggered")
-        return
-
     if take_profit is not None and current_price >= take_profit:
         st.info(f"Take Profit triggered at ${current_price:.2f}")
         sell_by_market(ticker, quantity, "Take Profit triggered")
-        return
-
 
 def check_manual_alert(ticker):
     if ticker not in st.session_state.price_alerts:
         return
-
     current_price = st.session_state.last_price
     if current_price is None:
         return
-
     alert_data = st.session_state.price_alerts[ticker]
     alert_price = alert_data.get("price")
     alert_type = alert_data.get("type")
     triggered = alert_data.get("triggered", False)
-
     if triggered:
         return
-
     if alert_type == "Above" and current_price >= alert_price:
         st.session_state.price_alerts[ticker]["triggered"] = True
         add_trade_history(ticker, "Manual Alert", 0, current_price, 0, 0, f"Above ${alert_price:.2f}")
         save_portfolio(st.session_state.current_user)
         st.warning(f"🔔 Alert triggered: {ticker} is above ${alert_price:.2f}")
-
     elif alert_type == "Below" and current_price <= alert_price:
         st.session_state.price_alerts[ticker]["triggered"] = True
         add_trade_history(ticker, "Manual Alert", 0, current_price, 0, 0, f"Below ${alert_price:.2f}")
         save_portfolio(st.session_state.current_user)
         st.warning(f"🔔 Alert triggered: {ticker} is below ${alert_price:.2f}")
-
 
 # ==========================
 # MAIN APP PAGE
@@ -384,12 +341,10 @@ def show_main_app():
 
     st.sidebar.markdown(f"<div class='main-title'>{ticker} ▼</div>", unsafe_allow_html=True)
     st.sidebar.markdown(f"<div class='subtitle'>{TICKER_NAME_MAP[ticker]}</div>", unsafe_allow_html=True)
-
     st.sidebar.markdown("---")
     st.sidebar.subheader("Market Execution / Quantity")
 
     q1, q2, q3, q4, q5 = st.sidebar.columns(5)
-
     with q1:
         if st.button("-5"):
             st.session_state.quantity = max(1, st.session_state.quantity - 5)
@@ -406,7 +361,6 @@ def show_main_app():
             st.session_state.quantity += 5
 
     quantity = st.session_state.quantity
-
     st.sidebar.markdown("---")
 
     current_holding = st.session_state.stocks.get(ticker, {})
@@ -419,7 +373,6 @@ def show_main_app():
         value=float(default_sl) if default_sl is not None else 0.0,
         step=1.0
     )
-
     take_profit_input = st.sidebar.number_input(
         "Take Profit",
         min_value=0.0,
@@ -439,7 +392,7 @@ def show_main_app():
     st.sidebar.markdown("---")
 
     if price is None:
-        st.sidebar.markdown("<div class='status-box'>Unable to fetch live price now.</div>", unsafe_allow_html=True)
+        st.sidebar.markdown("<div class='status-box'>Unable to fetch live price now.</div
     else:
         holding = st.session_state.stocks.get(ticker)
         if holding:
@@ -462,10 +415,21 @@ def show_main_app():
         st.markdown(f"<div class='buy-price'>{st.session_state.ask_price if st.session_state.ask_price else '--.--'}</div>", unsafe_allow_html=True)
         st.markdown("<div style='text-align:center;color:#90caf9'>Ask</div>", unsafe_allow_html=True)
 
-    # Real-time price refresh
-    import time
-    time.sleep(1)  
-    st.experimental_rerun()
+    # Buy / Sell Buttons
+    col_buy, col_sell = st.columns(2)
+    with col_buy:
+        if st.button("📈 Buy", type="primary", use_container_width=True):
+            buy_by_market(ticker, quantity)
+    with col_sell:
+        if st.button("📉 Sell", type="secondary", use_container_width=True):
+            sell_by_market(ticker, quantity)
+
+    # Logout Button
+    st.sidebar.markdown("---")
+    if st.sidebar.button("🔒 Logout"):
+        st.session_state.logged_in = False
+        st.session_state.current_user = None
+        st.experimental_rerun()
 
 # ==========================
 # RUN APP
@@ -479,3 +443,4 @@ else:
         st.session_state.stocks = portfolio["stocks"]
         st.session_state.price_alerts = portfolio["price_alerts"]
         st.session_state.trade_history = portfolio["trade_history"]
+    show_main_app()
