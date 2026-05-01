@@ -179,10 +179,9 @@ def show_login_page():
 
                     st.success("Login successful!")
 
-                    # Check login state and move to main page
-                    if st.session_state.logged_in:
-                        show_main_app()  # Redirect to the main app
-                        return  # Skip rerun
+                    # Skip to main app after login
+                    show_main_app()  # Navigate to the main page
+                    return  # Skip rerun to prevent going back to the login page
 
         with tab_signup:
             new_username = st.text_input("Create Login ID", key="signup_username")
@@ -480,6 +479,4 @@ else:
         st.session_state.cash = portfolio["cash"]
         st.session_state.stocks = portfolio["stocks"]
         st.session_state.price_alerts = portfolio["price_alerts"]
-        st.session_state.trade_history = portfolio["trade_history"]
-
-    show_main_app()
+        st.session_state.trade_history = portfolio
