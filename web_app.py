@@ -1,7 +1,6 @@
 import time
 import streamlit as st
 import yfinance as yf
-import pandas as pd
 import json
 import os
 from datetime import datetime
@@ -57,22 +56,6 @@ def refresh_price(ticker):
     st.session_state.bid_price = round(price - 0.03, 2)
     st.session_state.ask_price = round(price + 0.03, 2)
     return price
-
-# ==========================
-# Auto-Refresh Every Second
-# ==========================
-def auto_refresh(ticker):
-    while True:
-        price = refresh_price(ticker)  # 获取最新股票价格
-
-        if price is None:
-            st.write("Failed to fetch live price.")
-        else:
-            st.write(f"Updated price: ${price:.2f}")
-
-        # 强制刷新 Streamlit 页面
-        time.sleep(1)  # 等待 1 秒后刷新价格
-        st.experimental_rerun()  # 刷新页面，实时更新价格
 
 # ==========================
 # USER LOGIN AND PORTFOLIO FUNCTIONS
@@ -478,8 +461,17 @@ def show_main_app():
     with c2:
         st.markdown(f"<div class='buy-price'>{st.session_state.ask_price if st.session_state.ask_price else '--.--'}</div>", unsafe_allow_html=True)
         st.markdown("<div style='text-align:center;color:#90caf9'>Ask</div>", unsafe_allow_html=True)
-        
-    # 启动实时刷新
-    auto_refresh(ticker)
 
-    st
+    # 启动实时刷新
+    st.experimental_rerun()
+
+# ==========================
+# RUN APP
+# ==========================
+if not st.session_state.logged_in:
+    show_login_page()
+else:
+    if "cash" not in st.session_state:
+        portfolio = load_portfolio(st.session_state.current_user)
+        st.session_state.cash = portfolio["cash"]
+        st
