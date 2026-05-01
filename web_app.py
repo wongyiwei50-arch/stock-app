@@ -44,7 +44,7 @@ def get_stock_price(ticker):
 # Stock Price Refresh
 # ==========================
 def refresh_price(ticker):
-    price = get_stock_price(ticker)  # 获取最新股票价格
+    price = get_stock_price(ticker)  # Get the latest stock price
 
     if price is None:
         st.session_state.last_price = None
@@ -123,7 +123,7 @@ def save_portfolio(username):
 # SESSION INIT
 # ==========================
 if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False  # 初始化 'logged_in'
+    st.session_state.logged_in = False  # Initialize 'logged_in'
 
 if "current_user" not in st.session_state:
     st.session_state.current_user = None
@@ -178,7 +178,11 @@ def show_login_page():
                     st.session_state.trade_history = portfolio["trade_history"]
 
                     st.success("Login successful!")
-                    st.experimental_rerun()  # 重新运行应用，跳转到主页面
+
+                    # Check login state and move to main page
+                    if st.session_state.logged_in:
+                        show_main_app()  # Redirect to the main app
+                        return  # Skip rerun
 
         with tab_signup:
             new_username = st.text_input("Create Login ID", key="signup_username")
@@ -462,17 +466,7 @@ def show_main_app():
         st.markdown(f"<div class='buy-price'>{st.session_state.ask_price if st.session_state.ask_price else '--.--'}</div>", unsafe_allow_html=True)
         st.markdown("<div style='text-align:center;color:#90caf9'>Ask</div>", unsafe_allow_html=True)
 
-    # 启动实时刷新
+    # Real-time price refresh
     st.experimental_rerun()
 
-# ==========================
-# RUN APP
-# ==========================
-if not st.session_state.logged_in:
-    show_login_page()
-else:
-    if "cash" not in st.session_state:
-        portfolio = load_portfolio(st.session_state.current_user)
-        st.session_state.cash = portfolio["cash"]
-        st.session_state.stocks = portfolio["stocks"]
-        st.session
+# =========================
