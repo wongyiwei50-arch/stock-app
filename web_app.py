@@ -178,7 +178,7 @@ def show_login_page():
                     st.session_state.trade_history = portfolio["trade_history"]
 
                     st.success("Login successful!")
-                    st.rerun()
+                    st.experimental_rerun()  # 重新运行应用，跳转到主页面
 
         with tab_signup:
             new_username = st.text_input("Create Login ID", key="signup_username")
@@ -474,4 +474,5 @@ else:
     if "cash" not in st.session_state:
         portfolio = load_portfolio(st.session_state.current_user)
         st.session_state.cash = portfolio["cash"]
-        st
+        st.session_state.stocks = portfolio["stocks"]
+        st.session
