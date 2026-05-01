@@ -137,45 +137,29 @@ def save_portfolio(username):
         json.dump(data, file, indent=4)
 
 # ==========================
-# MAIN APP PAGE
+# SESSION INIT
 # ==========================
-def show_main_app():
-    ticker = st.sidebar.selectbox(
-        "Select Stock:",
-        list(TICKER_NAME_MAP.keys()),
-        index=list(TICKER_NAME_MAP.keys()).index(st.session_state.selected_ticker)
-    )
-    st.session_state.selected_ticker = ticker
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False  # 初始化 'logged_in'
 
-    # 启动实时刷新
-    auto_refresh(ticker)
+if "current_user" not in st.session_state:
+    st.session_state.current_user = None
 
-    st.write(f"Current Ticker: {ticker}")
+if "selected_ticker" not in st.session_state:
+    st.session_state.selected_ticker = "AAPL"
 
-    # Current Holdings Section
-    st.markdown("### Current Holdings")
-    current_holding = st.session_state.stocks.get(ticker, {})
-    st.write(f"Shares: {current_holding.get('quantity', 0)}")
-    st.write(f"Buy Price: ${current_holding.get('buy_price', 0.0)}")
-    st.write(f"Stop Loss: ${current_holding.get('stop_loss', 'not set')}")
-    st.write(f"Take Profit: ${current_holding.get('take_profit', 'not set')}")
+if "quantity" not in st.session_state:
+    st.session_state.quantity = 15
 
-    # Price Alert Section
-    st.sidebar.markdown("### Set Price Alert")
-    alert_price = st.sidebar.number_input("Alert Price", min_value=0.0, step=0.01)
-    alert_type = st.sidebar.selectbox("Alert Type", ["Above", "Below"])
+if "last_price" not in st.session_state:
+    st.session_state.last_price = None
 
-    if st.sidebar.button("Set Alert"):
-        if alert_price <= 0:
-            st.sidebar.error("Please enter a valid alert price.")
-        else:
-            st.session_state.price_alerts[ticker] = {
-                "price": alert_price,
-                "type": alert_type,
-                "triggered": False
-            }
-            save_portfolio(st.session_state.current_user)
-            st.sidebar.success(f"Price alert set for {ticker}: {alert_type} ${alert_price:.2f}")
+if "bid_price" not in st.session_state:
+    st.session_state.bid_price = None
+
+if "ask_price" not in st.session_state:
+    st.session_state.ask_price = None
+
 
 # ==========================
 # LOGIN PAGE
@@ -491,103 +475,11 @@ def show_main_app():
     with c1:
         st.markdown(f"<div class='sell-price'>{st.session_state.bid_price if st.session_state.bid_price else '--.--'}</div>", unsafe_allow_html=True)
         st.markdown("<div style='text-align:center;color:#ff8a80'>Bid</div>", unsafe_allow_html=True)
+    with c2:
+        st.markdown(f"<div class='buy-price'>{st.session_state.ask_price if st.session_state.ask_price else '--.--'}</div>", unsafe_allow_html=True)
+        st.markdown("<div style='text-align:center;color:#90caf9'>Ask</div>", unsafe_allow_html=True)
+        
     # 启动实时刷新
     auto_refresh(ticker)
 
-    st.write(f"Current Ticker: {ticker}")
-
-    # Current Holdings Section
-    st.markdown("### Current Holdings")
-    current_holding = st.session_state.stocks.get(ticker, {})
-    st.write(f"Shares: {current_holding.get('quantity', 0)}")
-    st.write(f"Buy Price: ${current_holding.get('buy_price', 0.0)}")
-    st.write(f"Stop Loss: ${current_holding.get('stop_loss', 'not set')}")
-    st.write(f"Take Profit: ${current_holding.get('take_profit', 'not set')}")
-
-    # Price Alert Section
-    st.sidebar.markdown("### Set Price Alert")
-    alert_price = st.sidebar.number_input("Alert Price", min_value=0.0, step=0.01)
-    alert_type = st.sidebar.selectbox("Alert Type", ["Above", "Below"])
-
-    if st.sidebar.button("Set Alert"):
-        if alert_price <= 0:
-            st.sidebar.error("Please enter a valid alert price.")
-        else:
-            st.session_state.price_alerts[ticker] = {
-                "price": alert_price,
-                "type": alert_type,
-                "triggered": False
-            }
-            save_portfolio(st.session_state.current_user)
-            st.sidebar.success(f"Price alert set for {ticker}: {alert_type} ${alert_price:.2f}")
-
-# ==========================
-# LOGIN PAGE
-# ==========================
-def show_login_page():
-    st.markdown("<div class='main-title'>📉 Fusion Stock Trading</div>", unsafe_allow_html=True)
-    st.markdown("<div class='subtitle'>Trade Smarter. Grow Faster.</div>", unsafe_allow_html=True)
-
-    col1, col2, col3 = st.columns([1, 1.2, 1])
-
-    with col2:
-        st.markdown("### 🍃 Please Enter Your Information")
-
-        tab_login, tab_signup = st.tabs(["Login", "Sign Up"])
-
-        with tab_login:
-            username = st.text_input("Login ID", key="login_username")
-            password = st.text_input("Password", type="password", key="login_password")
-
-            if st.button("🔍 Login", key="login_button"):
-                users = load_users()
-
-                if username not in users or users[username] != password:
-                    st.error("Invalid username or password.")
-                else:
-                    st.session_state.logged_in = True
-                    st.session_state.current_user = username
-
-                    portfolio = load_portfolio(username)
-                    st.session_state.cash = portfolio["cash"]
-                    st.session_state.stocks = portfolio["stocks"]
-                    st.session_state.price_alerts = portfolio["price_alerts"]
-                    st.session_state.trade_history = portfolio["trade_history"]
-
-                    st.success("Login successful!")
-                    st.rerun()
-
-        with tab_signup:
-            new_username = st.text_input("Create Login ID", key="signup_username")
-            new_password = st.text_input("Create Password", type="password", key="signup_password")
-            confirm_password = st.text_input("Confirm Password", type="password", key="signup_confirm")
-
-            if st.button("📝 Sign Up", key="signup_button"):
-                users = load_users()
-
-                if not new_username or not new_password:
-                    st.error("Please fill all fields.")
-                elif new_password != confirm_password:
-                    st.error("Passwords do not match.")
-                elif new_username in users:
-                    st.error("Username already exists.")
-                else:
-                    users[new_username] = new_password
-                    save_users(users)
-                    st.success("Account created successfully! You can now login.")
-
-
-# ==========================
-# RUN APP
-# ==========================
-if not st.session_state.logged_in:
-    show_login_page()
-else:
-    if "cash" not in st.session_state:
-        portfolio = load_portfolio(st.session_state.current_user)
-        st.session_state.cash = portfolio["cash"]
-        st.session_state.stocks = portfolio["stocks"]
-        st.session_state.price_alerts = portfolio["price_alerts"]
-        st.session_state.trade_history = portfolio["trade_history"]
-
-    show_main_app()
+    st
