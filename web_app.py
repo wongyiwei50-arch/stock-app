@@ -178,10 +178,7 @@ def show_login_page():
                     st.session_state.trade_history = portfolio["trade_history"]
 
                     st.success("Login successful!")
-
-                    # Skip to main app after login
-                    show_main_app()  # Navigate to the main page
-                    return  # Skip rerun to prevent going back to the login page
+                    st.experimental_rerun()
 
         with tab_signup:
             new_username = st.text_input("Create Login ID", key="signup_username")
@@ -466,6 +463,8 @@ def show_main_app():
         st.markdown("<div style='text-align:center;color:#90caf9'>Ask</div>", unsafe_allow_html=True)
 
     # Real-time price refresh
+    import time
+    time.sleep(1)  
     st.experimental_rerun()
 
 # ==========================
@@ -479,4 +478,4 @@ else:
         st.session_state.cash = portfolio["cash"]
         st.session_state.stocks = portfolio["stocks"]
         st.session_state.price_alerts = portfolio["price_alerts"]
-        st.session_state.trade_history = portfolio
+        st.session_state.trade_history = portfolio["trade_history"]
