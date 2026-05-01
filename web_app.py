@@ -190,7 +190,7 @@ def show_login_page():
                     st.session_state.price_alerts = portfolio["price_alerts"]
                     st.session_state.trade_history = portfolio["trade_history"]
                     st.success("Login successful!")
-                    st.experimental_rerun()
+                    st.rerun()
 
         with tab_signup:
             new_username = st.text_input("Create Login ID", key="signup_username")
@@ -429,7 +429,7 @@ def show_main_app():
     if st.sidebar.button("🔒 Logout"):
         st.session_state.logged_in = False
         st.session_state.current_user = None
-        st.experimental_rerun()
+        st.rerun()
 
 # ==========================
 # RUN APP
