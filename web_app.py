@@ -1,4 +1,3 @@
-import time
 import streamlit as st
 import yfinance as yf
 import pandas as pd
@@ -336,11 +335,8 @@ def add_trade_history(ticker, trade_type, quantity, price, amount, fee=0.0, note
     st.session_state.trade_history = st.session_state.trade_history[:500]
 
 
-# ==========================
-# Stock Price Refresh Function
-# ==========================
 def refresh_price(ticker):
-    price = get_stock_price(ticker)  # 获取最新价格
+    price = get_stock_price(ticker)
 
     if price is None:
         st.session_state.last_price = None
@@ -352,23 +348,6 @@ def refresh_price(ticker):
     st.session_state.bid_price = round(price - 0.03, 2)
     st.session_state.ask_price = round(price + 0.03, 2)
     return price
-    
-# ==========================
-# Auto-Refresh Every Second Using st.empty() to Update Specific Area
-# ==========================
-def auto_refresh(ticker):
-    price_placeholder = st.empty()  # 创建一个占位符，用于动态更新价格
-
-    while True:
-        price = refresh_price(ticker)  # 获取最新股票价格
-
-        if price is None:
-            price_placeholder.write("Failed to fetch live price.")
-        else:
-            price_placeholder.write(f"Updated price: ${price:.2f}")
-
-        # 每 1 秒刷新一次股票价格
-        time.sleep(1)  # 等待 1 秒后刷新价格
 
 
 def buy_by_market(ticker, quantity):
@@ -503,6 +482,7 @@ def check_manual_alert(ticker):
         save_portfolio(st.session_state.current_user)
         st.warning(f"🔔 Alert triggered: {ticker} is below ${alert_price:.2f}")
 
+
 # =========================
 # MAIN APP PAGE
 # =========================
@@ -514,10 +494,6 @@ def show_main_app():
     )
     st.session_state.selected_ticker = ticker
 
-    auto_refresh(ticker)
-
-    st.write(f"Current Ticker: {ticker}")
-    
     price = refresh_price(ticker)
     check_stop_loss_take_profit(ticker)
     check_manual_alert(ticker)
